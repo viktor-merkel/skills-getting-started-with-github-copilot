@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
             button.className = "remove-participant-btn";
             button.dataset.activity = name;
             button.dataset.participant = participant;
-            button.setAttribute("aria-label", `Unregister ${participant}`);
+            button.setAttribute("aria-label", "Unregister " + participant);
             button.title = "Unregister participant";
 
             const deleteIcon = document.createElement("span");
