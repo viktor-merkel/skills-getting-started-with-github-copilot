@@ -3,14 +3,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  let messageTimeoutId;
 
   function showMessage(message, type) {
     messageDiv.textContent = message;
     messageDiv.className = `message ${type}`;
     messageDiv.classList.remove("hidden");
 
+    if (messageTimeoutId) {
+      clearTimeout(messageTimeoutId);
+    }
+
     // Hide message after 5 seconds
-    setTimeout(() => {
+    messageTimeoutId = setTimeout(() => {
       messageDiv.classList.add("hidden");
     }, 5000);
   }
@@ -32,43 +37,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
         const participants = Array.isArray(details.participants) ? details.participants : [];
-        const participantsListItems = participants.length
-          ? participants
-              .map(
-                (participant) => `
-                  <li class="participant-item">
-                    <span class="participant-email">${participant}</span>
-                    <button
-                      type="button"
-                      class="remove-participant-btn"
-                      data-activity="${name}"
-                      data-participant="${participant}"
-                      aria-label="Unregister ${participant}"
-                      title="Unregister participant"
-                    >
-                      <span class="delete-icon" aria-hidden="true">x</span>
-                    </button>
-                  </li>
-                `
-              )
-              .join("")
-          : "<li class=\"empty-state\">No participants yet</li>";
 
+        // Build card structure; user-controlled values are set via textContent below
         activityCard.innerHTML = `
-          <h4>${name}</h4>
-          <p>${details.description}</p>
-          <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <h4></h4>
+          <p class="activity-description"></p>
+          <p><strong>Schedule:</strong> <span class="activity-schedule"></span></p>
+          <p><strong>Availability:</strong> <span class="activity-spots"></span> spots left</p>
           <div class="participants-section">
             <p class="participants-title">
               <strong>Participants</strong>
-              <span class="participants-count">${participants.length}</span>
+              <span class="participants-count"></span>
             </p>
-            <ul class="participants-list">
-              ${participantsListItems}
-            </ul>
+            <ul class="participants-list"></ul>
           </div>
         `;
+
+        // Set text content safely to prevent XSS
+        activityCard.querySelector("h4").textContent = name;
+        activityCard.querySelector(".activity-description").textContent = details.description;
+        activityCard.querySelector(".activity-schedule").textContent = details.schedule;
+        activityCard.querySelector(".activity-spots").textContent = spotsLeft;
+        activityCard.querySelector(".participants-count").textContent = participants.length;
+
+        // Build participants list using DOM APIs to prevent XSS from user-supplied emails
+        const participantsList = activityCard.querySelector(".participants-list");
+        if (participants.length) {
+          participants.forEach((participant) => {
+            const li = document.createElement("li");
+            li.className = "participant-item";
+
+            const span = document.createElement("span");
+            span.className = "participant-email";
+            span.textContent = participant;
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "remove-participant-btn";
+            button.dataset.activity = name;
+            button.dataset.participant = participant;
+            button.setAttribute("aria-label", `Unregister ${participant}`);
+            button.title = "Unregister participant";
+
+            const deleteIcon = document.createElement("span");
+            deleteIcon.className = "delete-icon";
+            deleteIcon.setAttribute("aria-hidden", "true");
+            deleteIcon.textContent = "x";
+
+            button.appendChild(deleteIcon);
+            li.appendChild(span);
+            li.appendChild(button);
+            participantsList.appendChild(li);
+          });
+        } else {
+          const li = document.createElement("li");
+          li.className = "empty-state";
+          li.textContent = "No participants yet";
+          participantsList.appendChild(li);
+        }
 
         activitiesList.appendChild(activityCard);
 
